@@ -2,7 +2,7 @@
 - 👀 I’m interested in java based web application development
 - 🌱 I’m currently learning spring boot
 - 💞️ I’m looking to collaborate on spring boot project
-- 📫 How to reach me email me at salmanoe@live.com
+- 📫 How to reach me email me at salmanoe.freelance@gmail.com
 
 <!---
 salmanoe/salmanoe is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.

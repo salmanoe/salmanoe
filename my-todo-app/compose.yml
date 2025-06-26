@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: ${ZOOKEEPER_IMAGE}
+    environment:
+      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_CLIENT_PORT}
+    ports:
+      - "${ZOOKEEPER_CLIENT_PORT}:${ZOOKEEPER_CLIENT_PORT}"
+
+  kafka:
+    image: ${KAFKA_IMAGE}
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: ${KAFKA_BROKER_ID}
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:${ZOOKEEPER_CLIENT_PORT}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_HOST}:${KAFKA_PORT}
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR}
+    ports:
+      - "${KAFKA_PORT}:${KAFKA_PORT}"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  todo-db:
+    image: ${TODO_DB_IMAGE}
+    environment:
+      POSTGRES_DB: ${TODO_DB_NAME}
+      POSTGRES_USER: ${TODO_DB_USER}
+      POSTGRES_PASSWORD: ${TODO_DB_PASSWORD}
+    ports:
+      - "${TODO_DB_PORT}:${TODO_DB_PORT}"
+    volumes:
+      - todo-db-volume:/var/lib/postgresql/data
+
+  reminder-db:
+    image: ${REMINDER_DB_IMAGE}
+    ports:
+      - "${REMINDER_DB_PORT}:${REMINDER_DB_PORT}"
+    volumes:
+      - reminder-db-volume:/data/db
+
+  security-service:
+    build:
+      context: .
+      dockerfile: ./security-service/Dockerfile
+    networks:
+      - todo-app
+    image: security-service:${SECURITY_SERVICE_VERSION}
+    restart: no
+    ports:
+      - "${SECURITY_SERVICE_PORT}:${SECURITY_SERVICE_PORT}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+    depends_on:
+      - kafka
+
+  todo-service:
+    build:
+      context: .
+      dockerfile: ./todo-service/Dockerfile
+    networks:
+      - todo-app
+    image: todo-service:${TODO_SERVICE_VERSION}
+    restart: no
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://todo-db:${TODO_DB_PORT}/${TODO_DB_NAME}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+    depends_on:
+      - todo-db
+      - kafka
+      - security-service
+    ports:
+      - "${TODO_SERVICE_PORT}:${TODO_SERVICE_PORT}"
+
+  reminder-service:
+    build:
+      context: .
+      dockerfile: ./reminder-service/Dockerfile
+    networks:
+      - todo-app
+    image: reminder-service:${REMINDER_SERVICE_VERSION}
+    restart: no
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://reminder-db:${REMINDER_DB_PORT}/${REMINDER_DB_NAME}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+    depends_on:
+      - reminder-db
+      - kafka
+      - security-service
+    ports:
+      - "${REMINDER_SERVICE_PORT}:${REMINDER_SERVICE_PORT}"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./api-gateway/Dockerfile
+    networks:
+      - todo-app
+    image: api-gateway:${API_GATEWAY_VERSION}
+    restart: no
+    ports:
+      - "${API_GATEWAY_PORT}:${API_GATEWAY_PORT}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+    depends_on:
+      - todo-service
+      - reminder-service
+      - security-service
+
+  bff:
+    build:
+      context: .
+      dockerfile: ./bff/Dockerfile
+    networks:
+      - todo-app
+    image: bff:${BFF_VERSION}
+    restart: no
+    ports:
+      - "${BFF_PORT}:${BFF_PORT}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+    depends_on:
+      - todo-service
+      - reminder-service
+
+volumes:
+  todo-db-volume:
+  reminder-db-volume:
+  kafka-data:
+
+networks:
+  todo-app:
+      name: todo-app

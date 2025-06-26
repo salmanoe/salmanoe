@@ -25,5 +25,4 @@ Thumbs.db
 /out/
 
 # Local environment files
-.env
-/my-todo-app/.env
+*.env

@@ -1,0 +1,28 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Compiled class files
+*.class
+
+# Temporary files
+*.swp
+*.bak
+
+# JetBrains IDEs
+/out/
+
+# Local environment files
+.env

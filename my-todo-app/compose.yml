@@ -3,13 +3,17 @@ version: '3.8'
 services:
   zookeeper:
     image: ${ZOOKEEPER_IMAGE}
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_CLIENT_PORT}
     ports:
       - "${ZOOKEEPER_CLIENT_PORT}:${ZOOKEEPER_CLIENT_PORT}"
+    networks:
+      - todo-app
 
   kafka:
     image: ${KAFKA_IMAGE}
+    container_name: kafka
     depends_on:
       - zookeeper
     environment:
@@ -19,24 +23,33 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR}
     ports:
       - "${KAFKA_PORT}:${KAFKA_PORT}"
+    networks:
+      - todo-app
     volumes:
       - kafka-data:/var/lib/kafka/data
 
   todo-db:
     image: ${TODO_DB_IMAGE}
+    container_name: todo-db
+
     environment:
       POSTGRES_DB: ${TODO_DB_NAME}
       POSTGRES_USER: ${TODO_DB_USER}
       POSTGRES_PASSWORD: ${TODO_DB_PASSWORD}
     ports:
       - "${TODO_DB_PORT}:${TODO_DB_PORT}"
+    networks:
+      - todo-app
     volumes:
       - todo-db-volume:/var/lib/postgresql/data
 
   reminder-db:
     image: ${REMINDER_DB_IMAGE}
+    container_name: reminder-db
     ports:
       - "${REMINDER_DB_PORT}:${REMINDER_DB_PORT}"
+    networks:
+      - todo-app
     volumes:
       - reminder-db-volume:/data/db
 
@@ -44,8 +57,7 @@ services:
     build:
       context: .
       dockerfile: ./security-service/Dockerfile
-    networks:
-      - todo-app
+    container_name: security-service
     image: security-service:${SECURITY_SERVICE_VERSION}
     restart: no
     ports:
@@ -54,13 +66,14 @@ services:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
     depends_on:
       - kafka
+    networks:
+      - todo-app
 
   todo-service:
     build:
       context: .
       dockerfile: ./todo-service/Dockerfile
-    networks:
-      - todo-app
+    container_name: todo-service
     image: todo-service:${TODO_SERVICE_VERSION}
     restart: no
     environment:
@@ -72,13 +85,14 @@ services:
       - security-service
     ports:
       - "${TODO_SERVICE_PORT}:${TODO_SERVICE_PORT}"
+    networks:
+      - todo-app
 
   reminder-service:
     build:
       context: .
       dockerfile: ./reminder-service/Dockerfile
-    networks:
-      - todo-app
+    container_name: reminder-service
     image: reminder-service:${REMINDER_SERVICE_VERSION}
     restart: no
     environment:
@@ -90,13 +104,14 @@ services:
       - security-service
     ports:
       - "${REMINDER_SERVICE_PORT}:${REMINDER_SERVICE_PORT}"
+    networks:
+      - todo-app
 
   api-gateway:
     build:
       context: .
       dockerfile: ./api-gateway/Dockerfile
-    networks:
-      - todo-app
+    container_name: api-gateway
     image: api-gateway:${API_GATEWAY_VERSION}
     restart: no
     ports:
@@ -107,13 +122,14 @@ services:
       - todo-service
       - reminder-service
       - security-service
+    networks:
+      - todo-app
 
   bff:
     build:
       context: .
       dockerfile: ./bff/Dockerfile
-    networks:
-      - todo-app
+    container_name: backend-for-frontend
     image: bff:${BFF_VERSION}
     restart: no
     ports:
@@ -123,6 +139,8 @@ services:
     depends_on:
       - todo-service
       - reminder-service
+    networks:
+      - todo-app
 
   prometheus:
     image: ${PROMETHEUS_IMAGE}
@@ -141,13 +159,19 @@ services:
     container_name: grafana
     ports:
       - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     networks:
       - todo-app
+    volumes:
+      - grafana-data:/var/lib/grafana
 
 volumes:
   todo-db-volume:
   reminder-db-volume:
   kafka-data:
+  grafana-data:
 
 networks:
   todo-app:

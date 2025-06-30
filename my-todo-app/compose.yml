@@ -124,6 +124,26 @@ services:
       - todo-service
       - reminder-service
 
+  prometheus:
+    image: ${PROMETHEUS_IMAGE}
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+    networks:
+      - todo-app
+
+  grafana:
+    image: ${GRAFANA_IMAGE}
+    container_name: grafana
+    ports:
+      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+    networks:
+      - todo-app
+
 volumes:
   todo-db-volume:
   reminder-db-volume:

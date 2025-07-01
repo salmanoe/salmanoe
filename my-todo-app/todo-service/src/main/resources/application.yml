@@ -1,3 +1,17 @@
 spring:
   application:
     name: TODO Service
+  datasource:
+    url: jdbc:postgresql://todo-db:${TODO_DB_PORT}/${TODO_DB_NAME}
+    username: ${TODO_DB_USER}
+    password: ${TODO_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    dbcp2:
+      test-while-idle: true
+      validation-query: SELECT 1
+  jpa:
+    database: POSTGRESQL
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    open-in-view: false
